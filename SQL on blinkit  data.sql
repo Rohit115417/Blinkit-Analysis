@@ -1,116 +1,121 @@
-use blinkit;
+-- Select the Blinkit database
+USE blinkit;
+
+-- ===== Renaming columns for consistency =====
 ALTER TABLE blin
-CHANGE `Outlet Establishment Year` `Outlet_Establishment_Year` int;
+CHANGE `Outlet Establishment Year` Outlet_Establishment_Year INT;
 
 ALTER TABLE blin
-CHANGE `Item Type` `Item_Type` varchar(100);
+CHANGE `Item Type` Item_Type VARCHAR(100);
 
 ALTER TABLE blin
-CHANGE `Outlet Location Type` `Outlet_Location_Type` varchar(100);
+CHANGE `Outlet Location Type` Outlet_Location_Type VARCHAR(100);
 
-update blin
-set Item_Fat_Content =
-case 
-when Item_Fat_Content in ('LF', 'low fat') then 'Low Fat'
-when Item_Fat_Content = 'reg' then 'Regular'
-else Item_Fat_Content
-end;
+ALTER TABLE blin
+CHANGE `Outlet Size` Outlet_Size VARCHAR(50);
 
-select * from blin;
+ALTER TABLE blin
+CHANGE `Outlet Type` Outlet_Type VARCHAR(50);
 
-select distinct(Item_Fat_Content) from blin;
+-- ===== Cleaning Item_Fat_Content values =====
+UPDATE blin
+SET Item_Fat_Content = CASE 
+    WHEN Item_Fat_Content IN ('LF', 'low fat') THEN 'Low Fat'
+    WHEN Item_Fat_Content = 'reg' THEN 'Regular'
+    ELSE Item_Fat_Content
+END;
 
-select cast(sum(Sales) / 1000000 AS  Decimal(10,2) ) as total_sales
-from blin;
+-- ===== Basic Checks =====
+SELECT * FROM blin;
+SELECT DISTINCT Item_Fat_Content FROM blin;
 
-select cast(avg(sales) as decimal(10,0)) as avg_sales
-from blin;
+-- ===== Overall Sales & Count =====
+SELECT CAST(SUM(Sales) / 1000000 AS DECIMAL(10,2)) AS total_sales FROM blin;
+SELECT CAST(AVG(Sales) AS DECIMAL(10,0)) AS avg_sales FROM blin;
+SELECT COUNT(*) AS total_items FROM blin;
 
-select count(*) from blin;
+-- ===== Sales Stats for Year 2022 =====
+SELECT CAST(SUM(Sales) / 1000000 AS DECIMAL(10,2)) AS total_sales
+FROM blin
+WHERE Outlet_Establishment_Year = 2022;
 
-select cast(sum(Sales) / 1000000 AS  Decimal(10,2) ) as total_sales
-from blin
-where  Outlet_Establishment_Year= 2022;
+SELECT CAST(AVG(Sales) AS DECIMAL(10,0)) AS avg_sales
+FROM blin
+WHERE Outlet_Establishment_Year = 2022;
 
-select cast(avg(sales) as decimal(10,0)) as avg_sales
-from blin
-where  Outlet_Establishment_Year= 2022;
+SELECT COUNT(*) AS total_items
+FROM blin
+WHERE Outlet_Establishment_Year = 2022;
 
-select count(*) from blin
-where  Outlet_Establishment_Year= 2022;
+SELECT CAST(AVG(Rating) AS DECIMAL(10,2)) AS avg_rating
+FROM blin
+WHERE Outlet_Establishment_Year = 2022;
 
-select cast(avg(Rating) as decimal(10,2)) as avg_rating
-from blin
-where  Outlet_Establishment_Year= 2022;
+-- ===== Group by Item_Fat_Content =====
+SELECT Item_Fat_Content,
+       CAST(SUM(Sales) / 1000 AS DECIMAL(10,2)) AS total_sales,
+       CAST(AVG(Sales) AS DECIMAL(10,0)) AS avg_sales,
+       CAST(AVG(Rating) AS DECIMAL(10,2)) AS avg_rating,
+       COUNT(*) AS no_of_items
+FROM blin
+GROUP BY Item_Fat_Content;
 
-select Item_Fat_Content,
- cast(sum(Sales)/1000 as decimal(10,2))  as total_sales,
- cast(avg(sales) as decimal(10,0)) as avg_sales,
- cast(avg(Rating) as decimal(10,2)) as avg_rating,
- count(*) as no_of_items
-from blin
-group by Item_Fat_Content;
+-- ===== Top 5 Item Types by Sales =====
+SELECT Item_Type,
+       CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
+       CAST(AVG(Sales) AS DECIMAL(10,0)) AS avg_sales,
+       CAST(AVG(Rating) AS DECIMAL(10,2)) AS avg_rating,
+       COUNT(*) AS no_of_items
+FROM blin
+GROUP BY Item_Type
+ORDER BY total_sales DESC
+LIMIT 5;
 
-select Item_Type,
- cast(sum(Sales)as decimal(10,2))  as total_sales,
- cast(avg(sales) as decimal(10,0)) as avg_sales,
- cast(avg(Rating) as decimal(10,2)) as avg_rating,
- count(*) as no_of_items
-from blin
-group by Item_Type
-order by total_sales desc
-limit 5;
+-- ===== Outlet_Location_Type with Item_Fat_Content =====
+SELECT Outlet_Location_Type, Item_Fat_Content,
+       CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
+       CAST(AVG(Sales) AS DECIMAL(10,0)) AS avg_sales,
+       CAST(AVG(Rating) AS DECIMAL(10,2)) AS avg_rating,
+       COUNT(*) AS no_of_items
+FROM blin
+GROUP BY Outlet_Location_Type, Item_Fat_Content
+ORDER BY total_sales ASC;
 
-select Outlet_Location_Type, Item_Fat_Content,
- cast(sum(Sales)as decimal(10,2))  as total_sales,
- cast(avg(sales) as decimal(10,0)) as avg_sales,
- cast(avg(Rating) as decimal(10,2)) as avg_rating,
- count(*) as no_of_items
-from blin
-group by Outlet_Location_Type, Item_Fat_Content
-order by total_sales asc;
+-- ===== Year-wise Summary =====
+SELECT Outlet_Establishment_Year,
+       CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
+       CAST(AVG(Sales) AS DECIMAL(10,2)) AS avg_sales,
+       COUNT(*) AS no_of_items,
+       CAST(AVG(Rating) AS DECIMAL(10,2)) AS avg_rating
+FROM blin
+GROUP BY Outlet_Establishment_Year
+ORDER BY total_sales ASC;
 
-select Outlet_Establishment_Year,
-    CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
-    cast(avg(sales) as decimal(10,2)) as avg_sales,
-    count(*) as no_of_items,
-    cast(avg(rating) as decimal(10,2)) as avg_rating
-    from blin
-    group by Outlet_Establishment_Year
-    order by total_sales asc;
-    
-alter table blin
-change `Outlet Size` `Outlet_Size` varchar(50);
+-- ===== Sales Percentage by Outlet_Size =====
+SELECT Outlet_Size,
+       CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
+       CAST(SUM(Sales) * 100 / SUM(SUM(Sales)) OVER() AS DECIMAL(10,2)) AS sales_percentage
+FROM blin
+GROUP BY Outlet_Size
+ORDER BY total_sales ASC;
 
-select outlet_size,
-     CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
-     cast(sum(sales) * 100 / sum(sum(sales)) over() as decimal(10,2)) as sales_percentage
-     from blin
-     group by outlet_size
-     order by total_sales asc;
-     
-alter table blin
-change `Outlet Location Type` `Outlet_Location_Type` varchar(50);
-     
-select Outlet_Location_Type,
-    CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
-    cast(avg(sales) as decimal(10,2)) as avg_sales,
-    count(*) as no_of_items,
-    cast(avg(rating) as decimal(10,2)) as avg_rating
-    from blin
-    group by Outlet_Location_Type
-    order by total_sales asc;
-    
-alter table blin
-change `Outlet Type` `Outlet_Type` varchar(50);
+-- ===== Summary by Outlet_Location_Type =====
+SELECT Outlet_Location_Type,
+       CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
+       CAST(AVG(Sales) AS DECIMAL(10,2)) AS avg_sales,
+       COUNT(*) AS no_of_items,
+       CAST(AVG(Rating) AS DECIMAL(10,2)) AS avg_rating
+FROM blin
+GROUP BY Outlet_Location_Type
+ORDER BY total_sales ASC;
 
-
-    select Outlet_Type,
-    CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
-    cast(avg(sales) as decimal(10,2)) as avg_sales,
-    cast(sum(sales) * 100 / sum(sum(sales)) over() as decimal(10,2)) as sales_percentage,
-    count(*) as no_of_items,
-    cast(avg(rating) as decimal(10,2)) as avg_rating
-    from blin
-    group by outlet_Type
-    order by total_sales asc;
+-- ===== Summary by Outlet_Type =====
+SELECT Outlet_Type,
+       CAST(SUM(Sales) AS DECIMAL(10,2)) AS total_sales,
+       CAST(AVG(Sales) AS DECIMAL(10,2)) AS avg_sales,
+       CAST(SUM(Sales) * 100 / SUM(SUM(Sales)) OVER() AS DECIMAL(10,2)) AS sales_percentage,
+       COUNT(*) AS no_of_items,
+       CAST(AVG(Rating) AS DECIMAL(10,2)) AS avg_rating
+FROM blin
+GROUP BY Outlet_Type
+ORDER BY total_sales ASC;
